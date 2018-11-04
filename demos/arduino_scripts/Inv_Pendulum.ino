@@ -23,13 +23,14 @@ double reference;
 //With respect to Track and velocity
 double cart_pos = 0;
 
-double Kp = 80; //550 /400
-double Kd = 8; //80  //50
-double Ki = 0.1; //0.1
+double Kp = 80; //550 /400 Proportional Gain for Pendulum Angle
+double Kd = 8; //80  //50 Derivative Gain for Pendulum Angle
+double Ki = 0.1; //0.1 Integral Gain for Pendulum Angle
+
+double Kp_cart = 2; //Proportional Gain for Cart Position
+double Ki_cart = 0.001; //Integral Gain for Cart Position
 
 
-double Kp_cart = 2;
-double Ki_cart = 0.001;
 double total_cart_error;
 int motor_adjust;
 
