@@ -1,5 +1,6 @@
+// Developer: Brayden DeBoon
+// email: brayden.deboon@uoit.net
 
-//Define our motor OUTPUT pins.
 
 // To run this experiment, you need the pendulum, arduino (obviously)
 // a DC motor and DC motor driver. The ones used for the demo are similar to:
@@ -11,21 +12,22 @@
 // We used random objects around the lab to make the pendulum, as MECE's I assume you can all build one
 // Motor base voltage was 23V. 
 
+//Define our motor OUTPUT pins.
+
 #define motor_cw 9 //PWM pin on arduino for clockwise rotation
 #define motor_ccw 10 //PWM pin for counter-clockwise rotation
 #define encoder0PinA  2 //define channel A of our encoder (pendulum)
 #define encoder0PinB  5 //define channel B of encoder (pendulum)
+#define motor_enable 11 //motor contorller enable pin (Digital OUT)
 
 int motor_voltage; //create global variable for motor voltage
 double encoder0Pos = 0; //global variable for pendulum angle encoder data
-double encoder1Pos = 0; //global variable for cart position encoder data
 
 // With respect to angle
 double error = 0; //Error between measured and desired
 double previousError; //For calculating derivative of error
 double totalError = 0; //For calculating intergral of error
-double desired_angle = 0;
-double reference;
+double desired_angle = 0; //What angle do we want
 
 //Initialize starting angle (zero degrees) and cart position
 double angle = 0;
@@ -47,7 +49,7 @@ void setup() {
   pinMode(encoder0PinA, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(encoder0PinA), doEncoder0, RISING);
 
-  digitalWrite(11, HIGH); // Set enable to HIGH, activates driver
+  digitalWrite(motor_enable, HIGH); // Set enable to HIGH, activates driver
   analogWrite(motor_cw, LOW); //Make sure motors start 'off'
   analogWrite(motor_ccw, LOW);
 }
