@@ -1,6 +1,5 @@
-//Inverted Pendulum Code for Validation of Optimized Active Disturbance Rejection Controller
-
 //Define our motor OUTPUT pins.
+
 #define motor_cw 9
 #define motor_ccw 10
 #define encoder0PinA  2 //define channel A of our encoder
@@ -126,4 +125,40 @@ void doEncoder1() {
   else {
     encoder1Pos--;
   }
+}
+
+double fal_(double e, double alpha, double delta) {
+  
+  double fal;
+  if (abs(e) <= delta) {
+    fal = e/(pow(delta,(1-alpha)));
+  }
+  else {
+    fal = (pow(abs(e), alpha))*sign(e);
+  }
+  
+  return fal;
+}
+
+double sign(double val) {
+  if (val < 0) {return -1;}
+  if (val == 0) {return 0;}
+  return 1;  
+}
+
+double fhan(double v_1, double v_2, double r_0, double h_0) {
+
+  double d, a_0, y, a_1, a_2, s_y, s_a, a, fhan;
+
+  d = h_0*pow(r_0, 2);
+  a_0 = h_0*v_2;
+  y = v_1 + a_0;
+  a_1 = sqrt(d*(d+8*abs(y)));
+  a_2 = a_0 + (sign(y)*(a_1 - d))/2;
+  s_y = (sign(y + d) - sign(y - d))/2;
+  a = (a_0 + y - a_2)*s_y + a_2;
+  s_a = (sign(a+d)-sign(a-d))/2;
+  fhan = -r_0*(((a/d)-sign(a))*s_a)-(r_0*sign(a));
+  return fhan;
+
 }
