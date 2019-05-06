@@ -1,0 +1,18 @@
+1.) Make sure both master and slave on the same network (Slave not using ethernet (also connected to robot))
+
+2.) Start roscore on master
+
+3.) Run shell script with master ip as argument
+
+./meca_falcon_teleop_master.sh 192.168.0.108
+
+4.) Ensure Meca is powered on, reset, and there is a connection via Ethernet
+
+5.) Run shell script on slave computer (either by ssh or physically entering it) with master and slave ip as arguments
+
+./meca_falcon_teleop_slave.sh master_ip slave_ip
+
+example: ./meca_falcon_teleop_slave.sh 192.168.0.108 192.168.0.109
+
+
+
