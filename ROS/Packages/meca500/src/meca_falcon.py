@@ -10,11 +10,23 @@ import time
 import sys
 from threading import Timer
 from sensor_msgs.msg import Joy
+from geometry_msgs.msg import Vector3
 
 global robot
 global x_direc
 global y_direc
 global z_direc
+global Phi
+global Theta
+global Gamma
+global grip
+global is_close
+
+x_direc = 0;
+y_direc = 0;
+z_direc = 0;
+grip = 0;
+is_close = 1;
 
 ROBOT_IP = "192.168.0.100"   # IP of the robot
 ROBOT_PORT = 10000           # Communication port
@@ -23,15 +35,37 @@ def callback(data):
     global x_direc
     global y_direc
     global z_direc
+    global grip
     x_direc = data.axes[2]
     y_direc = data.axes[0] #Y direction
     z_direc = data.axes[1]
+    grip = data.buttons[0]
+	
+def euler_callback(eu):
+    global Phi
+    global Theta
+    global Gamma
+    Phi = eu.x
+    Theta = 2*(eu.y - 20) + 90  #Y direction
+    Gamma = 2*(eu.z - 20)
+
+def s_down():
+    global robot
+    sys.stdout.flush()
+    print "Shutting down meca_falcon node"
+    robot.run('ResetError')
+    robot.run('Delay', [1])
+    robot.run('DeactivateRobot')
+    sys.stdout.flush()
+    print("Closing connection")
+    robot_disconnect()
 
 def main_program():
 
     rospy.init_node('falcon_joy_teleop',anonymous=True)
 
     rospy.Subscriber("falcon/joystick", Joy, callback)
+    rospy.Subscriber("euler_angles", Vector3, euler_callback)
     rate = rospy.Rate(10)
 
     """Main procedure"""
@@ -39,6 +73,17 @@ def main_program():
     global x_direc
     global y_direc
     global z_direc
+    global Phi
+    global Theta
+    global Gamma
+    global grip
+    global is_close
+
+    Phi = 0
+    Theta = 90
+    Gamma = 0
+
+    rospy.on_shutdown(s_down)
 
     robot_connect()
     print("Running program main_program...")
@@ -52,31 +97,56 @@ def main_program():
     robot.run('SetJointAcc', [50])
     robot.run('SetBlending', [50])
     robot.run('SetAutoConf', [1])
+    #robot.run('SetTRF', [65, 0, 19, 0, 90, 0])
     # Movements
     robot.run('MoveJoints', [-20.000, 10.000, -10.000, 20.000, -10.000, -10.000])
     robot.run('MoveJoints', [20.000, -10.000, 10.000, -20.000, 20.000, -10.000])
     robot.run('MoveJoints', [-20.000, 10.000, -10.000, 20.000, -10.000, -10.000])
     robot.run('MoveJoints', [0.000, -20.000, 20.000, 0.000, 20.000, 0.000])
-    robot.wait_for('3012', 'Did not receive EOB')
+    #robot.wait_for('3012', 'Did not receive EOB')
     robot.run('GetJoints')
     robot.get_response()
+    robot.run('GripperOpen')
+    is_close = 0
     #robot.run('Delay', [1])
     #robot.run('DeactivateRobot')
-    print("Main_program done")
+    #print("Main_program done")
     #sys.stdout.flush()
     robot.run('MovePose', [200, 0, 250, 0, 90, 0])
+    #robot.wait_for('3012', 'Did not receive EOB')
     x_direc = 0.073;
 
     while not rospy.is_shutdown():
-        x = (((x_direc - 0.073)/0.102)*80)+188
+	#Regular mapped range
+        x = 268 - (((x_direc - 0.073)/0.102)*80)
         y = (y_direc/0.055)*-208
-        z = ((z_direc+0.057)/0.112)*325 + 30
-        robot.run('MovePose', [x, y, z, 0, 90, 0])
+        z = ((z_direc+0.057)/0.114)*220 + 70
+	#z = ((z_direc+0.057)/0.112)*325 + 30
+
+	#Constrined to a 3cm cube
+	#x = 230 - (((x_direc - 0.073)/0.102)*0.5)
+	#y = (y_direc/0.055)*-0.5 
+	#z = ((z_direc+0.057)/0.112)*0.5 + 260
+
+	if grip == 8:
+	    if is_close:
+	    	is_close = 0
+	    	robot.run('GripperOpen')
+		grip = 0
+	    else:
+		is_close = 1
+		robot.run('GripperClose')
+		grip = 0
+
+        if Gamma > 40:
+            Gamma = 40
+
+        robot.run('MovePose', [x, y, z, Phi*4, Theta, Gamma])
         robot.wait_for('3012', 'Did not receive EOB')
 	rate.sleep()
 
     robot.run('Delay', [1])
-    robot.run('DeactivateRobot')
+    #robot.run('DeactivateRobot')
     sys.stdout.flush()
 
 def robot_connect():
@@ -178,9 +248,9 @@ class MecaRobot:
 if __name__ == "__main__":
     """Call Main procedure"""
     main_program()
-
-    time.sleep(3)
+    time.sleep(8)
     print("Closing connection")
-    robot_disconnect()
+    #robot_disconnect()
+
     # Pause execution before closing process (allows users to read last message)
     time.sleep(2)
