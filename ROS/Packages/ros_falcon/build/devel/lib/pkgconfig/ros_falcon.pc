@@ -1,0 +1,8 @@
+prefix=/home/brayden/catkin_ws/src/ros_falcon-master/build/devel
+
+Name: ros_falcon
+Description: Description of ros_falcon
+Version: 0.0.0
+Cflags: -I/home/brayden/catkin_ws/src/ros_falcon-master/build/devel/include
+Libs: -L/home/brayden/catkin_ws/src/ros_falcon-master/build/devel/lib 
+Requires: rospy roscpp message_runtime std_msgs

@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/brayden/catkin_ws/src/ros_falcon-master/build/devel/setup.sh
