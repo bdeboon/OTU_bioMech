@@ -43,6 +43,13 @@ sudo apt update && sudo apt install google-drive-ocamlfuse
 #$    mkdir ~/googledrive
 #$    google-drive-ocamlfuse ~/googledrive
 
+#Install Adobe Reader
+sudo apt-get install gtk2-engines-murrine:i386 libcanberra-gtk-module:i386 libatk-adaptor:i386 libgail-common:i386
+sudo add-apt-repository "deb http://archive.canonical.com/ precise partner"
+sudo apt-get update
+sudo apt-get install adobereader-enu
+sudo add-apt-repository -r "deb http://archive.canonical.com/ precise partner"
+sudo apt update
 
 #Install GNU Octave (Matlab Substitute)
 echo "Installing GNU Octave"
