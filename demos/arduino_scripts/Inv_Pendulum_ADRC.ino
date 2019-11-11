@@ -1,39 +1,30 @@
-//Define our motor OUTPUT pins.
+
+// ADRC Controller Adruino Script
+//Define your OUTPUT pins.
+// This script will use a motor as our ouput, through a L298N Driver 
 
 #define motor_cw 9
 #define motor_ccw 10
-#define encoder0PinA  2 //define channel A of our encoder
-#define encoder0PinB  5 //define channel B of encoder
-#define encoder1PinA  3 //define channel A of our encoder
-#define encoder1PinB  7 //define channel B of encoder
 
 int motor_voltage; //create global variable for motor voltage
-double encoder0Pos = 0; //global variable for enc. position angle
-double encoder1Pos = 0; //Track pos encoder
+
+// Two encoders for inverted pendulum (pendulum angle and cart)
+//Define you INPUT pins (we will be using two quadrature encoders)
+#define encoder0PinA  2 //define channel A of our encoder 0 
+#define encoder0PinB  5 //define channel B of encoder 0
+#define encoder1PinA  3 //define channel A of our encoder 1
+#define encoder1PinB  7 //define channel B of encoder 1
+
+double encoder0Pos = 0; //Pendulum angle encoder value
+double encoder1Pos = 0; //Cart position encoder value
 
 
-// With respect to angle
-double angle = 0;
-double error = 0;
-double previousError;
-double totalError = 0;
-double angle_adj;
-double angle_cal;
-double desired_angle = 0;
-double reference;
+// Place your references here!
+double pendulum_reference = 0;
+double cart_reference = 0;
 
 //With respect to Track and velocity
 double cart_pos = 0;
-
-double Kp = 80; //550 /400
-double Kd = 8; //80  //50
-double Ki = 0.1; //0.1
-
-
-double Kp_cart = 2;
-double Ki_cart = 0.001;
-double total_cart_error;
-int motor_adjust;
 
 void setup() {
   // put your setup code here, to run once:
@@ -56,8 +47,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  angle_adj = analogRead(A0);
-  angle_adj = angle_adj - angle_cal;
+  // Place your reference here!
   desired_angle = reference + 3 * (angle_adj / 1024);
 
   cart_pos = -1 * encoder1Pos / 51.42; //Cart Pos in mm
