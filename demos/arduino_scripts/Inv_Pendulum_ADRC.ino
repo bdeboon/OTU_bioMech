@@ -45,8 +45,8 @@ double beta_02 = 1/(3*h);
 // Extended state observer gain 3
 double beta_03 = 1/(64*h*h); 
 // Nonlinear error function gains
-gamma_1 = 0.5;
-gamma_2 = 0.25;
+double gamma_1 = 0.5;
+double gamma_2 = 0.25;
 // Nonlinear Feedback combiner gains
 double r_1 = 50; // Feedback Comb. Aggression
 double h_1 = 0.008; // Precision factor (MAIN TUNING PARAMETER) Low h = more aggressive
@@ -81,7 +81,7 @@ void loop() {
   
   // Place your reference here!
   // Our reference will be a sinusoidal cart position between 10cm and -10cm
-  cart_reference = 0.1*sin(0.4*(current_time/1000)); 
+  cart_reference = 0.1*sin(0.3*(current_time/1000)); 
 
   //Relates the encoder count to meters
   cart_pos = (-1 * encoder0Pos / 51.42)/1000; //Cart Pos in meters
