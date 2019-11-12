@@ -1,112 +1,134 @@
-//Define our motor OUTPUT pins.
+
+// ADRC Controller Adruino Script
+// Define your OUTPUT pins.
+// This script will use a motor as our ouput, through a L298N Driver
+// We are trying to control a cart position! Your applications can be different!
 
 #define motor_cw 9
 #define motor_ccw 10
-#define encoder0PinA  2 //define channel A of our encoder
-#define encoder0PinB  5 //define channel B of encoder
-#define encoder1PinA  3 //define channel A of our encoder
-#define encoder1PinB  7 //define channel B of encoder
 
 int motor_voltage; //create global variable for motor voltage
-double encoder0Pos = 0; //global variable for enc. position angle
-double encoder1Pos = 0; //Track pos encoder
 
+// Two encoders for inverted pendulum (pendulum angle and cart)
+//Define you INPUT pins (we will be using two quadrature encoders)
+#define encoder0PinA  2 //define channel A of our encoder 0 
+#define encoder0PinB  5 //define channel B of encoder 0
 
-// With respect to angle
-double angle = 0;
-double error = 0;
-double previousError;
-double totalError = 0;
-double angle_adj;
-double angle_cal;
-double desired_angle = 0;
-double reference;
+double encoder0Pos = 0; //Cart angle encoder value
 
-//With respect to Track and velocity
-double cart_pos = 0;
+// Place your reference initial conditions here!
+double cart_reference = 0;
 
-double Kp = 80; //550 /400
-double Kd = 8; //80  //50
-double Ki = 0.1; //0.1
+// Add in timing paramters!
+unsigned long currrent_time; // For current time
+unsigned long old_time; // For calculating time derivatives
 
+// Add in ADRC gains!
+double h = 0.002; //Estimated time step (time it takes to run one loop())
+double v_1 = 0; // Updated reference from transient profile
+double v_2 = 0; // Time varying reference from transient profile
+double z_1 = 0; // Observed state 1 (The state we are tryig to control)
+double z_2 = 0; // First time derivative of observed state 1
+double z_3 = 0; // Total disturbance term for dual integral plant
+// Linear estimation of input proportionality
+double b_0 = 0.2; //i.e. current to torque ratio for a motor, after gear reduction!
 
-double Kp_cart = 2;
-double Ki_cart = 0.001;
-double total_cart_error;
-int motor_adjust;
+///////////////////////////////////////////////////////////
+// TUNABLE ADRC GAINS! ADJUST THESE IF NEEDED
+// Trasient profile generator aggressiveness factor
+// Lower r_0 means more aggressive transient profile
+double r_0 = 50; 
+// Extended state observer gain 1 
+double beta_01 = 1; 
+// Extended state observer gain 2
+double beta_02 = 1/(3*h); 
+// Extended state observer gain 3
+double beta_03 = 1/(64*h*h); 
+// Nonlinear error function gains
+double gamma_1 = 0.5;
+double gamma_2 = 0.25;
+// Nonlinear Feedback combiner gains
+double r_1 = 50; // Feedback Comb. Aggression
+double h_1 = 0.008; // Precision factor (MAIN TUNING PARAMETER) Low h = more aggressive
+double c_1 = 0.75; // Fine tuning parameter
+///////////////////////////////////////////////////////////////
+
 
 void setup() {
-  // put your setup code here, to run once:
-  //Serial.begin(9600);
-  pinMode(A0, INPUT);
-  pinMode(11, OUTPUT);
+  // Put your setup code here, to run once:
+  old_time = millis(); //Initialize old_time counter
+  
+  // Initialize all inputs and outputs
+  
+  //Initialize Output
   pinMode(motor_cw, OUTPUT);
   pinMode(motor_ccw, OUTPUT);
+  
+  //Initialize Input
   pinMode(encoder0PinA, INPUT_PULLUP);
   pinMode(encoder0PinB, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(encoder0PinA), doEncoder0, RISING);
-  attachInterrupt(digitalPinToInterrupt(encoder1PinA), doEncoder1, RISING);
-
-
-  digitalWrite(11, HIGH);
+  
+  //Ensure motors are off to begin!
   analogWrite(motor_cw, LOW);
   analogWrite(motor_ccw, LOW);
-  angle_cal = analogRead(A0);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  angle_adj = analogRead(A0);
-  angle_adj = angle_adj - angle_cal;
-  desired_angle = reference + 3 * (angle_adj / 1024);
 
-  cart_pos = -1 * encoder1Pos / 51.42; //Cart Pos in mm
+  currrent_time = millis(); //Get current time in milliseconds
+  
+  // Place your reference here!
+  // Our reference will be a sinusoidal cart position between 10cm and -10cm
+  cart_reference = 0.1*sin(0.3*(current_time/1000)); 
 
-  //Serial.println(desired_angle);
+  //Relates the encoder count to meters
+  cart_pos = (-1 * encoder0Pos / 51.42)/1000; //Cart Pos in meters
+  
+  
+  // *********Now for the ADRC!!**************
+  // Place your reference everywhere there is a "cart_reference"
+  // Place your measured input everywhere there is a "cart_pos"
+  h = current_time - old_time;
+  // Transient Profile generator!
+  v_1 = v_1 + h*v_2; // Update transient profile reference
+  v_2 = v_2 + h*fhan(v_1 - cart_reference, v_2, r_0, h) //Update derivative of transient profile
 
-  angle = (encoder0Pos / 2048) * 360;
-  //Serial.println(angle);
-  previousError = error;
-  error = desired_angle - angle; //Want angle to be zero
+  // Extended State Observer!
+  // Fist observed state update from extended state observer
+  z_1 = z_1 + h*z_2 - beta_01*(z_1 - cart_pos);     
+  // Second observed state update from extended state observer
+  z_2 = z_2 + h*(z_3 + b_0*motor_voltage) - beta_02*fal((z_1 - cart_pos),gamma_1,h);
+  // Total disturbance term
+  z_3 = z_3 - beta_03*fal((z_1 - cart_pos), gamma_2,h);
+  
+  //Nonlinear feedback combiner!
+  motor_voltage = -(fhan((v_1-z_1),c_1*(v_2-z_2),r_1,h_1) + z_3)/b_0;
+  
+  
+  ///////////// Thats it for ADRC! /////////////////////////////////
+  // The rest of the script sends the found input to the motors! Easy as pie!
+  motor_adjust = round((motor_voltage/12)*255); //Adjust motor voltage to Arduino PWM max/min 
+  old_time = current_time;
 
-  if (abs(error) > 1) {
-    totalError += error;
-  }
-  if (abs(cart_pos) > 100) {
-    total_cart_error += cart_pos;
-  }
-
-  motor_voltage = (Kp * error) + (Ki * totalError) + (Kd * (error - previousError));
-
-  motor_adjust = Kp_cart * cart_pos + Ki_cart * total_cart_error;
-
-  motor_voltage = round(motor_voltage + motor_adjust);
-
-
-
-  //Serial.print("Cart Pos: ");
-  //Serial.print(cart_pos);
-  //Serial.print(" Voltage = ");
-  //Serial.println(angle);
-
-
-  if (motor_voltage > 0) {
+  if (motor_adjust > 0) { // Forward Direction
     analogWrite(motor_cw, LOW);
-    if (motor_voltage > 255) {
-      motor_voltage = 255;
+    if (motor_adjust > 255) { // Input saturation
+      motor_adjust = 255;
     }
-    analogWrite(motor_ccw, motor_voltage);
+    analogWrite(motor_ccw, motor_adjust);
   }
 
-  if (motor_voltage < 0) {
+  if (motor_adjust < 0) { // Reverse Direction
     analogWrite(motor_ccw, LOW);
-    if (motor_voltage < -255) {
-      motor_voltage = -255;
+    if (motor_adjust < -255) { // Input saturation
+      motor_adjust = -255;
     }
-    motor_voltage = motor_voltage * -1;
-    analogWrite(motor_cw, motor_voltage);
+    motor_adjust = motor_adjust * -1;
+    analogWrite(motor_cw, motor_adjust);
   }
-
+  
 
 }
 
@@ -116,14 +138,6 @@ void doEncoder0() {
   }
   else {
     encoder0Pos--;
-  }
-}
-void doEncoder1() {
-  if (digitalRead(encoder1PinB) == LOW) {
-    encoder1Pos++;
-  }
-  else {
-    encoder1Pos--;
   }
 }
 
@@ -162,4 +176,3 @@ double fhan(double v_1, double v_2, double r_0, double h_0) {
   return fhan;
 
 }
-© 2019 GitHub, Inc.
