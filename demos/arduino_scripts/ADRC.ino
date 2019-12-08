@@ -1,3 +1,15 @@
+// Nice find! Here's the next clue: 
+
+//      Little by little, I hope you're having a ball -
+//      but did you notice, the'ye not just pins on the wall?         [7/10]
+
+
+
+
+// Pro-tip: binary
+
+
+
 
 // ADRC Controller Adruino Script
 // Define your OUTPUT pins.
